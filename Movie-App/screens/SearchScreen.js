@@ -1,21 +1,39 @@
 import { View, Text, Dimensions, SafeAreaView, TextInput, TouchableOpacity, ScrollView, TouchableWithoutFeedback, Image } from 'react-native'
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { XMarkIcon } from 'react-native-heroicons/outline';
 import { useNavigation } from '@react-navigation/native';
 import Loading from '../components/loading';
+import { fallbackMoviePoster, image185, searchMovies } from '../api/moviedb';
+import { debounce } from 'lodash';
 
 var {width, height} = Dimensions.get('window');
 
 export default function SearchScreen() {
     const navigation = useNavigation();
-    const [results, setResults] = useState([1,2,3,4]);
+    const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
-    let movieName ='Ant-Man and the wasp: Quantummania';
+    const handleSearch = value=> {
+        if(value && value.length > 2) {
+            setLoading(true);
+            searchMovies({
+                query: value,
+            }).then(data=>{
+                setLoading(false);
+                if (data && data.results) setResults(data.results);
+            })
+        } else {
+            setLoading(false);
+            setResults([]);
+        }
+    }
+
+    const handleTextDebounce = useCallback(debounce(handleSearch, 400), []);
 
   return (
     <SafeAreaView className="bg-neutral-800 flex-1">
         <View className="mx-4 mb-3 flex-row justify-between items-center border border-neutral-500 rounded-full">
             <TextInput
+                onChangeText={handleTextDebounce}
                 placeholder='Search Movie'
                 placeholderTextColor={'lightgray'}
                 className="pb-1 pl-6 flex-1 text-base font-semibold text-white tracking-wider"
@@ -49,11 +67,11 @@ export default function SearchScreen() {
                                         >
                                             <View className="space-y-2 mb-4">
                                                 <Image className="rounded-3xl"
-                                                    source={require('../assets/images/moviePoster2.png')}
+                                                    source={{uri: image185(item?.poster_path) || fallbackMoviePoster}}
                                                     style={{width: width*0.44, height: height*0.3}}
                                                 />
                                                 <Text className="text-neutral-300 ml-1">
-                                                    {movieName.length>22? movieName.slice(0,22)+'...': movieName}
+                                                    {item?.title>22? item?.title.slice(0,22)+'...': item?.title}
                                                 </Text>
                                             </View>
                                         </TouchableWithoutFeedback>
