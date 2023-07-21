@@ -7,6 +7,8 @@ import { styles, theme } from '../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import Cast from '../components/cast';
 import MovieList from '../components/movieList';
+import Loading from '../components/loading';
+import { fallbackMoviePoster, fechtMovieCredits, fechtMovieDetails, fechtSimilarMovies, image500 } from '../api/moviedb';
 
 var {width, height} = Dimensions.get('window');
 const ios = Platform.OS == 'ios';
@@ -17,13 +19,34 @@ export default function MovieScreen() {
     const {params: item} = useRoute();
     const [isFavourite, toggleFavourite] = useState(false);
     const navigation = useNavigation();
-    const [cast, setCast] = useState([1,2,3,4,5]);
-    const [similarMovies, setSimilarMovies] = useState([1,2,3,4,5]);
-    let movieName ='Ant-Man and the wasp: Quantummania';
+    const [cast, setCast] = useState([]);
+    const [similarMovies, setSimilarMovies] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [movie, setMovie] = useState({});
 
     useEffect(()=> {
-        // call the movie details api
-    },[item])
+        setLoading(true);
+        getMovieDetails(item.id);
+        getMovieCredits(item.id);
+        getSimilarMovies(item.id);
+    },[item]);
+
+    const getMovieDetails = async id=> {
+        const data = await fechtMovieDetails(id);
+        if(data) setMovie(data);
+        setLoading(false);
+    }
+
+    const getMovieCredits = async id=> {
+        const data = await fechtMovieCredits(id);
+        if(data && data.cast) setCast(data.cast);
+    }
+
+    const getSimilarMovies = async id=> {
+        const data = await fechtSimilarMovies(id);
+        if(data && data.results) setSimilarMovies(data.results);
+    }
+
   return (
     <ScrollView
         contentContainerStyle={{paddingBottom: 20}}
@@ -39,49 +62,61 @@ export default function MovieScreen() {
                     <HeartIcon size="35" color={isFavourite? theme.background: "white"}/>
                 </TouchableOpacity>
             </SafeAreaView>
-            <View>
-                <Image
-                    source={require('../assets/images/moviePoster2.png')}
-                    style={{width, height: height*0.55}}
-                />
-                <LinearGradient
-                  colors={['transparent', 'rgba(23,23,23,0.8)', 'rgba(23,23,23,1)']}
-                  style={{width, height: height*0.40}}
-                  start={{x: 0.5, y: 0}}
-                  end={{x: 0.5, y: 1}}
-                  className="absolute bottom-0"
-                />
-            </View>
+            {
+                loading? (
+                    <Loading/>
+                ): (
+                    <View>
+                        <Image
+                            source={{uri: image500(movie?.poster_path) || fallbackMoviePoster}}
+                            // source={require('../assets/images/moviePoster2.png')}
+                            style={{width, height: height*0.55}}
+                        />
+                        <LinearGradient
+                            colors={['transparent', 'rgba(23,23,23,0.8)', 'rgba(23,23,23,1)']}
+                            style={{width, height: height*0.40}}
+                            start={{x: 0.5, y: 0}}
+                            end={{x: 0.5, y: 1}}
+                            className="absolute bottom-0"
+                        />
+                    </View>
+                )
+            }
         </View>
 
         {/* movie details */}
         <View style={{marginTop: -(height*0.09)}} className="space-y-3">
             {/* title */}
             <Text className="text-white text-center text-3xl font-bold tracking-wider">
-                {movieName}
+                {movie?.title}
             </Text>
             {/* status, relese, runtime */}
-            <Text className="text-neutral-400 font-semibold text-base text-center">
-                Release . 2020 . 170 min
-            </Text>
-
+            {
+                movie?.id? (
+                    <Text className="text-neutral-400 font-semibold text-base text-center">
+                        {movie?.status} • {movie?.release_date?.split('-')[0]} • {movie?.runtime} min
+                    </Text>
+                ): null
+            }
             {/* genres */}
             <View className="flex-row justify-center mx-4 space-x-2">
-                <Text className="text-neutral-400 font-semibold text-base text-center">
-                    Action .
-                </Text>
-
-                <Text className="text-neutral-400 font-semibold text-base text-center">
-                    Thrill .
-                </Text>
-
-                <Text className="text-neutral-400 font-semibold text-base text-center">
-                    Comedy
-                </Text>
+                {
+                    movie?.genres?.map((genre, index)=>{
+                        let showDot = index+1 != movie.genres.lenght;
+                        return (
+                            <Text key={index} className="text-neutral-400 font-semibold text-base text-center">
+                                {genre?.name} {showDot? "•": null}
+                            </Text>
+                        )
+                    })
+                }
             </View>
-                {/* description */}
+
+            {/* description */}
             <Text className="text-neutral-400 mx-4 tracking-wide">
-                Scott Lang e Hope van Dyne em suas jornadas como super-heróis. Scott e sua família são puxados para o Reino Quântico, onde eles precisarão enfrentar um novo e terrível vilão: Kang, o Conquistador e M.O.D.O.K..
+                {
+                    movie?.overview
+                }
             </Text>
         </View>
 
