@@ -1,5 +1,5 @@
 # Movie App with React Native
-Movie App using React Native
+Movie App using React Native consuming the API from The Movie Database website.
 
 ## Get Started
 install dev dependencies
